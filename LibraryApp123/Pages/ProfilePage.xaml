@@ -1,0 +1,9 @@
+<Page x:Class="libraryapp.Pages.ProfilePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Профиль" Loaded="Page_Loaded"
+      Style="{StaticResource PageRoot}">
+    <ScrollViewer Padding="20,16" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="Root" MaxWidth="820"/>
+    </ScrollViewer>
+</Page>
