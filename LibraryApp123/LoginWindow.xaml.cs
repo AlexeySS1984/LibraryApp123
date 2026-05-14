@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Windows;
+using System.Windows.Navigation;
 using LibraryApp123;
 
 namespace libraryapp
@@ -65,6 +66,40 @@ namespace libraryapp
             Core.Context.SaveChanges();
 
             MessageBox.Show("Регистрация выполнена. Перейдите на вкладку «Вход».", "Регистрация", MessageBoxButton.OK, MessageBoxImage.Information);
+            ClearRegisterFields();
+        }
+
+        private void LinkToRegister_Click(object sender, RequestNavigateEventArgs e)
+        {
+            var tabControl = this.FindName("TabControl") as System.Windows.Controls.TabControl;
+            if (tabControl != null)
+            {
+                tabControl.SelectedIndex = 1;
+            }
+            e.Handled = true;
+        }
+
+        private void LinkToLogin_Click(object sender, RequestNavigateEventArgs e)
+        {
+            var tabControl = this.FindName("TabControl") as System.Windows.Controls.TabControl;
+            if (tabControl != null)
+            {
+                tabControl.SelectedIndex = 0;
+            }
+            e.Handled = true;
+        }
+
+        private void ClearRegisterFields()
+        {
+            RegLogin.Clear();
+            RegEmail.Clear();
+            RegName.Clear();
+            RegPassword.Clear();
+        }
+
+        private void TabControl_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
         }
     }
 }
