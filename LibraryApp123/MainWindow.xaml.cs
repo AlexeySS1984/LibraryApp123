@@ -47,5 +47,13 @@ namespace libraryapp
         }
 
         private void NavProfile(object sender, RoutedEventArgs e) => RootFrame.Navigate(new ProfilePage());
+
+        private void NavLogout(object sender, RoutedEventArgs e)
+        {
+            AppSession.SetUser(null);
+            var loginWin = new LoginWindow();
+            loginWin.Show();
+            Close();
+        }
     }
 }

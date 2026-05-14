@@ -85,17 +85,17 @@ namespace libraryapp.Pages
             RootPanel.Children.Add(readExp);
 
             var act = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 16, 0, 0) };
-            var complainBook = new Button { Content = "Жалоба на книгу", Margin = new Thickness(0, 0, 8, 0) };
+            var complainBook = new Button { Content = "Жалоба на книгу", Style = Application.Current.Resources["GhostButton"] as Style, Margin = new Thickness(0, 0, 8, 0) };
             complainBook.Click += (_, __) => SubmitComplaint(ComplaintKinds.Book, book.BookId, book.AuthorUserId, null);
             act.Children.Add(complainBook);
 
-            var complainAuthor = new Button { Content = "Жалоба на автора", Margin = new Thickness(0, 0, 8, 0) };
+            var complainAuthor = new Button { Content = "Жалоба на автора", Style = Application.Current.Resources["GhostButton"] as Style, Margin = new Thickness(0, 0, 8, 0) };
             complainAuthor.Click += (_, __) => SubmitComplaint(ComplaintKinds.Author, null, book.AuthorUserId, null);
             act.Children.Add(complainAuthor);
 
             if (AppSession.IsAdmin)
             {
-                var freezeBook = new Button { Content = "Заморозить книгу", Margin = new Thickness(16, 0, 0, 0) };
+                var freezeBook = new Button { Content = "Заморозить книгу", Style = Application.Current.Resources["DangerButton"] as Style };
                 freezeBook.Click += (_, __) =>
                 {
                     var reason = UiPrompts.AskMultiline("Причина заморозки книги");
@@ -116,59 +116,84 @@ namespace libraryapp.Pages
 
             if (!AppSession.IsFrozen)
             {
-                var addPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 8) };
-                addPanel.Children.Add(new TextBlock { Text = "Ваш отзыв (оценка 1–5 и комментарий)" });
-                var ratingBox = new ComboBox { Width = 80, Margin = new Thickness(0, 4, 0, 0) };
-                for (var i = 1; i <= 5; i++) ratingBox.Items.Add(i);
-                ratingBox.SelectedIndex = 4;
-                addPanel.Children.Add(ratingBox);
-                var comment = new TextBox { MinHeight = 60, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
-                addPanel.Children.Add(comment);
-                var send = new Button { Content = "Отправить отзыв", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 6, 0, 0) };
-                send.Click += (_, __) =>
+                // ✅ Проверяем, есть ли уже отзыв этого пользователя на эту книгу
+                var existingReview = Core.Context.Reviews
+                    .FirstOrDefault(r => r.BookId == book.BookId && r.UserId == AppSession.CurrentUser.UserId);
+
+                if (existingReview == null)
                 {
-                    var r = ratingBox.SelectedIndex + 1;
-                    var rev = new Reviews
+                    var addPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 8) };
+                    addPanel.Children.Add(new TextBlock { Text = "Ваш отзыв (оценка 1–5 и комментарий)" });
+                    var ratingBox = new ComboBox { Width = 80, Margin = new Thickness(0, 4, 0, 0) };
+                    for (var i = 1; i <= 5; i++) ratingBox.Items.Add(i);
+                    ratingBox.SelectedIndex = 4;
+                    addPanel.Children.Add(ratingBox);
+                    var comment = new TextBox { MinHeight = 60, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+                    addPanel.Children.Add(comment);
+                    var send = new Button { Content = "Отправить отзыв", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 6, 0, 0), Style = Application.Current.Resources["PrimaryActionButton"] as Style };
+                    send.Click += (_, __) =>
                     {
-                        BookId = book.BookId,
-                        UserId = AppSession.CurrentUser.UserId,
-                        Rating = r,
-                        Comment = comment.Text,
-                        IsFrozen = false
+                        var r = ratingBox.SelectedIndex + 1;
+                        var rev = new Reviews
+                        {
+                            BookId = book.BookId,
+                            UserId = AppSession.CurrentUser.UserId,
+                            Rating = r,
+                            Comment = comment.Text,
+                            IsFrozen = false
+                        };
+                        Core.Context.Reviews.Add(rev);
+                        Core.Context.SaveChanges();
+                        MessageBox.Show("Отзыв добавлен.");
+                        NavigationService?.Navigate(new BookDetailPage(book.BookId));
                     };
-                    Core.Context.Reviews.Add(rev);
-                    Core.Context.SaveChanges();
-                    MessageBox.Show("Отзыв добавлен.");
-                    NavigationService?.Navigate(new BookDetailPage(book.BookId));
-                };
-                addPanel.Children.Add(send);
-                RootPanel.Children.Add(addPanel);
+                    addPanel.Children.Add(send);
+                    RootPanel.Children.Add(addPanel);
+                }
+                else
+                {
+                    var alreadyReviewedPanel = new TextBlock
+                    {
+                        Text = "Вы уже оставили отзыв на эту книгу. Один пользователь может оставить только один отзыв на книгу.",
+                        Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 100, 116, 139)),
+                        FontSize = 12,
+                        Margin = new Thickness(0, 8, 0, 0),
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    RootPanel.Children.Add(alreadyReviewedPanel);
+                }
             }
 
-            foreach (var rev in book.Reviews.OrderByDescending(r => r.ReviewId))
+            foreach (var rev in book.Reviews.Where(r => !r.IsFrozen).OrderByDescending(r => r.ReviewId))
             {
                 var box = new Border
                 {
-                    BorderBrush = Brushes.LightGray,
+                    BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 226, 232, 240)),
                     BorderThickness = new Thickness(1),
-                    Padding = new Thickness(8),
-                    Margin = new Thickness(0, 6, 0, 0)
+                    Padding = new Thickness(12),
+                    Margin = new Thickness(0, 8, 0, 0),
+                    CornerRadius = new System.Windows.CornerRadius(8),
+                    Background = System.Windows.Media.Brushes.White
                 };
                 var sp = new StackPanel();
-                sp.Children.Add(new TextBlock { Text = (rev.AppUsers?.DisplayName ?? "Пользователь") + " — оценка: " + rev.Rating, FontWeight = FontWeights.SemiBold });
-                if (rev.IsFrozen)
-                    sp.Children.Add(new TextBlock { Text = "Отзыв заморожен: " + (rev.FreezeReason ?? ""), Foreground = Brushes.DarkRed, FontSize = 12 });
-                sp.Children.Add(new TextBlock { Text = rev.Comment ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
+                sp.Children.Add(new TextBlock
+                {
+                    Text = (rev.AppUsers?.DisplayName ?? "Пользователь") + " — оценка: " + rev.Rating,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 30, 41, 59))
+                });
+                sp.Children.Add(new TextBlock { Text = rev.Comment ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0), Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 71, 85, 105)) });
 
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-                var cRev = new Button { Content = "Пожаловаться на отзыв", Margin = new Thickness(0, 0, 8, 0) };
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+                var cRev = new Button { Content = "Пожаловаться", Style = Application.Current.Resources["GhostButton"] as Style, Margin = new Thickness(0, 0, 8, 0) };
                 cRev.Click += (_, __) => SubmitComplaint(ComplaintKinds.Review, null, null, rev.ReviewId);
                 row.Children.Add(cRev);
 
                 if (AppSession.IsAdmin)
                 {
-                    var fr = new Button { Content = "Заморозить отзыв" };
+                    var fr = new Button { Content = "Заморозить", Style = Application.Current.Resources["DangerButton"] as Style };
                     var revId = rev.ReviewId;
+                    fr.Margin = new Thickness(0); // Можно задать нужный отступ, если требуется
                     fr.Click += (_, __) =>
                     {
                         var reason = UiPrompts.AskMultiline("Причина заморозки отзыва");

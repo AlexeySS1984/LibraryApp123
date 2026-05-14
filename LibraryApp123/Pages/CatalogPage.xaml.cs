@@ -35,7 +35,6 @@ namespace libraryapp.Pages
 
         private void Refresh_Click(object sender, System.EventArgs e)
         {
-            // Защита: если визуальные элементы ещё не инициализированы — выйти
             if (BooksHost == null) return;
 
             var search = (SearchBox.Text ?? string.Empty).Trim().ToLowerInvariant();
@@ -48,6 +47,7 @@ namespace libraryapp.Pages
                 .Include(b => b.AppUsers)
                 .Include(b => b.Genres)
                 .Include(b => b.Reviews)
+                .Where(b => !b.IsFrozen)  // ✅ Скрываем замороженные книги
                 .ToList();
 
             IEnumerable<Books> q = books;
@@ -83,15 +83,15 @@ namespace libraryapp.Pages
         {
             var root = new Border
             {
-                Width = 182,
-                Margin = new Thickness(8),
+                Width = 176,
+                Margin = new Thickness(6),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(14),
+                CornerRadius = new CornerRadius(12),
                 Background = Brushes.White,
                 Cursor = Cursors.Hand,
                 Tag = b.BookId,
-                Effect = new DropShadowEffect { BlurRadius = 16, ShadowDepth = 2, Opacity = 0.12, Direction = 270, Color = Color.FromRgb(12, 18, 34) }
+                Effect = new DropShadowEffect { BlurRadius = 12, ShadowDepth = 2, Opacity = 0.08, Direction = 270, Color = Color.FromRgb(30, 41, 59) }
             };
             root.MouseLeftButtonUp += (s, ev) =>
             {
@@ -103,14 +103,14 @@ namespace libraryapp.Pages
             var bi = ImageHelper.ToBitmapImage(b.CoverImage);
             if (bi != null)
             {
-                sp.Children.Add(new Image { Height = 128, Stretch = Stretch.UniformToFill, Source = bi });
+                sp.Children.Add(new Image { Height = 120, Stretch = Stretch.UniformToFill, Source = bi });
             }
             else
             {
                 sp.Children.Add(new Border
                 {
-                    Height = 128,
-                    CornerRadius = new CornerRadius(10),
+                    Height = 120,
+                    CornerRadius = new CornerRadius(8),
                     ClipToBounds = true,
                     Background = new SolidColorBrush(Color.FromRgb(241, 245, 249)),
                     Child = new TextBlock
@@ -118,7 +118,8 @@ namespace libraryapp.Pages
                         Text = "Нет обложки",
                         VerticalAlignment = VerticalAlignment.Center,
                         HorizontalAlignment = HorizontalAlignment.Center,
-                        Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139))
+                        Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                        FontSize = 11
                     }
                 });
             }
@@ -128,37 +129,28 @@ namespace libraryapp.Pages
                 Text = b.Title,
                 TextWrapping = TextWrapping.Wrap,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(12, 18, 34)),
-                Margin = new Thickness(0, 8, 0, 0)
+                Foreground = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                Margin = new Thickness(0, 8, 0, 0),
+                FontSize = 12,
+                MaxHeight = 40
             });
 
             sp.Children.Add(new TextBlock
             {
                 Text = b.AppUsers?.DisplayName ?? "",
                 Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 12
+                FontSize = 11,
+                TextTrimming = TextTrimming.CharacterEllipsis
             });
 
             sp.Children.Add(new TextBlock
             {
                 Text = avg.HasValue ? $"Оценка: {avg:0.0}" : "Нет оценок",
                 Margin = new Thickness(0, 4, 0, 0),
-                FontSize = 12,
+                FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105))
             });
 
-            if (b.IsFrozen)
-            {
-                sp.Children.Add(new TextBlock
-                {
-                    Text = "Заморожена",
-                    Foreground = Brushes.DarkRed,
-                    FontSize = 11,
-                    Margin = new Thickness(0, 4, 0, 0)
-                });
-            }
-
-            //var shelfPanel = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var shelfPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             var uid = AppSession.CurrentUser.UserId;
             var bookId = b.BookId;
@@ -166,11 +158,11 @@ namespace libraryapp.Pages
 
             var cb = new ComboBox
             {
-                Height = 28,
+                Height = 30,
                 FontSize = 11,
-                ToolTip = "Откройте список и выберите полку — книга будет добавлена или перенесена."
+                ToolTip = "Выберите полку"
             };
-            cb.Items.Add(new ComboBoxItem { Content = "На полку: выберите…", Tag = null });
+            cb.Items.Add(new ComboBoxItem { Content = "На полку…", Tag = null });
             cb.Items.Add(new ComboBoxItem { Content = "Заброшено", Tag = ShelfTypes.Abandoned });
             cb.Items.Add(new ComboBoxItem { Content = "В планах", Tag = ShelfTypes.Planned });
             cb.Items.Add(new ComboBoxItem { Content = "Читаю", Tag = ShelfTypes.Reading });
@@ -189,13 +181,13 @@ namespace libraryapp.Pages
                 {
                     Core.Context.UserBookShelves.Add(new UserBookShelves { UserId = uid, BookId = bookId, ShelfType = shelf });
                     Core.Context.SaveChanges();
-                    MessageBox.Show("Книга добавлена в выбранный список.", "Каталог", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Книга добавлена в список.", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else if (row.ShelfType != shelf)
                 {
                     row.ShelfType = shelf;
                     Core.Context.SaveChanges();
-                    MessageBox.Show("Книга перенесена в выбранный список.", "Каталог", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Книга перенесена в список.", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             };
 
@@ -213,7 +205,6 @@ namespace libraryapp.Pages
             return root;
         }
 
-        /// <summary>Клики по полке (ComboBox) не открывают карточку книги.</summary>
         private static bool IsInteractiveNavigationSource(DependencyObject src)
         {
             while (src != null)
@@ -224,6 +215,5 @@ namespace libraryapp.Pages
             }
             return false;
         }
-
     }
 }

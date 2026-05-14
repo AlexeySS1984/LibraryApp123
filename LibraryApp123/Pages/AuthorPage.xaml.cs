@@ -30,7 +30,7 @@ namespace libraryapp.Pages
             var books = Core.Context.Books.Where(b => b.AuthorUserId == uid && !b.IsFrozen).OrderBy(b => b.Title).ToList();
             var lb = new ListBox { ItemsSource = books, DisplayMemberPath = "Title", Margin = new Thickness(0, 8, 0, 0), MaxHeight = 200 };
             Root.Children.Add(lb);
-            var edit = new Button { Content = "Редактировать выбранную", Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+            var edit = new Button { Content = "Редактировать выбранную", Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left};
             edit.Click += (_, __) =>
             {
                 if (lb.SelectedItem is Books b)
