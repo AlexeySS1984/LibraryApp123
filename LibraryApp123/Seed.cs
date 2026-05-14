@@ -5,8 +5,14 @@ using LibraryApp123;
 
 namespace libraryapp
 {
+    /// <summary>
+    /// Инициализатор начальных данных для базы данных библиотеки.
+    /// </summary>
     public static class Seed
     {
+        /// <summary>
+        /// Гарантирует наличие всех необходимых начальных данных в БД.
+        /// </summary>
         public static void Ensure()
         {
             var db = Core.Context;
